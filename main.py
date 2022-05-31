@@ -1,10 +1,11 @@
 from parse import parse
-from excel_work import work_excel
+from excel_work import *
 
-articuls = []
+count_lines = 9
 
-articuls = work_excel(603)
+articuls = work_excel(count_lines)
+info = parse(articuls)
 
-parse(articuls)
+input_to_worksheet(info, count_lines)
 
-print(articuls)
+print(info)
