@@ -5,10 +5,10 @@ articuls = []
 def set_worksheet():
     wb = openpyxl.open('TestCopy.xlsx')
     sheet = wb.active
-    return sheet
+    return sheet, wb
 
 def work_excel(count):
-    sheet = set_worksheet()
+    sheet, wb = set_worksheet()
 
     for line in range(4, count):
         articuls.append({
@@ -18,12 +18,16 @@ def work_excel(count):
     return articuls
 
 def input_to_worksheet(info, count):
-    sheet = set_worksheet()
+    sheet, wb = set_worksheet()
+
 
     i = 0
     for line in range(4, count):
-        sheet[line][1] = info[i]['title']
+        sheet[line][1].value = info[i]['title']
+        sheet[line][2].value = info[i]['main_photo']
+        sheet[line][4].value = int(info[i]['price'].replace(' ', ''))
+        sheet[line][10].value = info[i]['material']
 
-    i+=1
+        i+=1
 
-    sheet.save
+    wb.save('TestCopy.xlsx')

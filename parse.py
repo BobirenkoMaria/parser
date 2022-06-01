@@ -49,9 +49,12 @@ def get_website_content(html):
     #print(info)
 
 
-def parse(articuls):
+def parse(articuls, count):
+    count-=4
+
     URL = ''
 
+    i=0
     for articul in articuls:
         URL = get_url(articul, URL)
 
@@ -62,9 +65,13 @@ def parse(articuls):
                 if html.status_code == 200:
                     get_content(html.text)
 
+                    print(str(round(i*100/count)) + '%')
+                    i+=1
+
             except AttributeError:
                 print("Connection refused")
 
+    print('100%')
     return info
 
 
