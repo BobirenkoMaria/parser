@@ -1,4 +1,6 @@
 import requests
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
 
 info = []
@@ -6,13 +8,16 @@ info = []
 HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                          'Chrome/100.0.4896.127 Safari/537.36 OPR/86.0.4363.64', 'accept': '*/*'}
 
+
+def get_page_data(articuls, count):
+    asyncio.run(parse(articuls, count))
+
+
 def get_html(url, params=None):
     try:
         r = requests.get(url, headers=HEADERS, params=params)
     except requests.exceptions.ConnectionError:
         return None
-    except NameError:
-        print('URL undefined')
     return r
 
 
@@ -21,24 +26,12 @@ def get_url(articul, url):
     return url
 
 
-def get_content(html):
+async def get_content(html, session):
     soup = BeautifulSoup(html, 'html.parser')
     items = soup.find('a', itemprop='name', href=True)
 
-    if items != None:
-        href_now = 'https://wasserkraft.ru/' + items.get('href')
-        website_parse(href_now)
-
-    else:
-        info.append({
-            'title': '',
-            'main_photo': '',
-            # 'photos': str(photos.get('href')),
-            'price': '0',
-            'material': ''
-        })
-
-
+    href_now = 'https://wasserkraft.ru/' + items.get('href')
+    await website_parse(href_now, session)
 
 
 def get_website_content(html):
@@ -61,42 +54,60 @@ def get_website_content(html):
     #print(info)
 
 
-def parse(articuls, start_line, count):
-    count-=start_line
-
+async def parse(articuls, count):
+    count-=4
     URL = ''
 
-    i=0
-    for articul in articuls:
-        URL = get_url(articul, URL)
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+
+        i=0
+        for articul in articuls:
+            task = asyncio.create_task(get_data_task(articul, URL, session))
+            tasks.append(task)
+            print(str(round(i * 100 / count)) + '%')
+            i += 1
+
+        print(info)
+        await asyncio.gather(*tasks)
+
+
+    print('100%')
+    return info
+
+
+
+async def get_data_task(articul, URL, session):
+    URL = 'https://wasserkraft.ru/search-results?query=' + str(articul)
+
+    async with session.get(url=URL, headers=HEADERS) as resp:
 
         html = None
         while html == None:
-            html = get_html(URL)
-            try:
-                if html.status_code == 200:
-                    get_content(html.text)
+            #html = get_html(URL)
+            html = await resp.text()
 
-                    print(str(round(i*100/count)) + '%')
-                    i+=1
+            print(html)
+            try:
+                if resp.status == 200:
+                    await get_content(html, session)
+
 
             except AttributeError:
                 print("Connection refused")
 
-
-    print('100%')
-
-    return info
+        return html
 
 
-def website_parse(url):
+
+async def website_parse(url, session):
     html = None
     while html == None:
-        html = get_html(url)
+        html = await (session.get(url)).text()
         try:
             if html.status_code == 200:
                 #print(html.text)
 
-                get_website_content(html.text)
+                get_website_content(html)
         except AttributeError:
             print("Connection refused in website_parse")

@@ -1,16 +1,15 @@
+from parse2 import get_page_data
 from parse import parse
 from excel_work import *
 
-count_lines = 9
+start_line = 24
+end_line = 603
 
-articuls = work_excel(count_lines)
-info = parse(articuls, count_lines)
-
-
-
-input_to_worksheet(info, count_lines)
+articuls = work_excel(start_line, end_line)
+info = parse(articuls, start_line, end_line)
+input_to_worksheet(info, start_line, end_line)
 
 i = 0
-for line in range(4, count_lines):
+for line in range(start_line, end_line):
     print(info[i]['title'])
     i+=1
