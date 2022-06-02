@@ -1,17 +1,11 @@
 import requests
-import asyncio
-import aiohttp
 from bs4 import BeautifulSoup
+import time
 
 info = []
 
 HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                          'Chrome/100.0.4896.127 Safari/537.36 OPR/86.0.4363.64', 'accept': '*/*'}
-
-
-def get_page_data(articuls, count):
-    asyncio.run(parse(articuls, count))
-
 
 def get_html(url, params=None):
     try:
@@ -21,93 +15,164 @@ def get_html(url, params=None):
     return r
 
 
-def get_url(articul, url):
-    url = 'https://wasserkraft.ru/search-results?query=' + str(articul)
+def get_url(articul, url, website):
+    if website == 1:
+        url = 'https://wasserkraft.ru/search-results?query=' + str(articul)
+
+    elif website == 2:
+        url = 'https://davitamebel.ru/search/?q=' + str(articul)
     return url
 
 
-async def get_content(html, session):
+def get_content(html, website, articul):
     soup = BeautifulSoup(html, 'html.parser')
     items = soup.find('a', itemprop='name', href=True)
 
-    href_now = 'https://wasserkraft.ru/' + items.get('href')
-    await website_parse(href_now, session)
+    href_now = ''
+    if items != None:
+        if website == 1:
+            href_now = 'https://wasserkraft.ru/' + items.get('href')
+        elif website == 2:
+            href_now = 'https://davitamebel.ru/' + items.get('href')
+        website_parse(href_now, website, articul)
+
+    else:
+        if website == 1:
+            info.append({
+                'title': '',
+                'main_photo': '',
+                'photos': '',
+                'price': '0',
+                'material': ''
+            })
+        elif website == 2:
+            info.append({
+                'articulate': '',
+                'title': '',
+                'main_photo': '',
+                'photos': '',
+                'price': '0',
+                'material': ''
+            })
 
 
-def get_website_content(html):
+def get_content1(html, i):
+    soup = BeautifulSoup(html, 'html.parser')
+    items = soup.find('a', itemprop='name', href=True)
+
+    href_now = ''
+    if items != None:
+        href_now = 'https://wasserkraft.ru/' + items.get('href')
+        # website_parse(href_now)
+
+    else:
+        info.append({
+            'title': '',
+            'main_photo': '',
+            'photos': '',
+            'price': '',
+            'material': ''
+        })
+    #print(str(i) + ')', href_now)
+
+
+def get_website_content(html, website, articul):
     soup = BeautifulSoup(html, 'html.parser')
 
-    title = soup.find('h1', class_="catalog-header__title title")
-    main_photo = soup.find('a', class_="product-carousel__item zoom", href=True)
-    #photos = soup.find_all('a', class_='product-carousel__item zoom', href=True)
-    price = soup.find('span', itemprop="price")
-    material = soup.find('div', class_='product__item not_list')
+    if website == 1:
+        title = soup.find('h1', class_="catalog-header__title title")
+        main_photo = soup.find('a', class_="product-carousel__item zoom", href=True)
+        photos = soup.find_all('a', class_='product-carousel__item zoom', href=True)
+        price = soup.find('span', itemprop="price")
+        material = soup.find('div', class_='product__item not_list')
 
-    info.append({
-        'title': title.get_text(),
-        'main_photo': 'https://wasserkraft.ru/' + str(main_photo.get('href')),
-        #'photos': str(photos.get('href')),
-        'price': price.get_text(),
-        'material': (str(material.get_text()).strip())[9:]
-    })
+
+        info.append({
+            'title': title.get_text(),
+            'main_photo': 'https://wasserkraft.ru/' + str(main_photo.get('href')),
+            'photos': getList(photos),
+            'price': price.get_text(),
+            'material': (str(material.get_text()).strip())[9:]
+        })
+    elif website == 2:
+        title = soup.find('h1', itemprop="name")
+        price = soup.find('span', class_="old-price hidden-xs")
+        if (price == None):
+            price = soup.find('span', itemprop="price")
+
+        material = soup.find('div', class_='product-info')
+
+        info.append({
+            'articulate': articul,
+            'title': title.get_text(),
+            'price': price.get_text(),
+            'material': ''
+        })
 
     #print(info)
 
 
-async def parse(articuls, count):
-    count-=4
+def getList(tegs):
+    href_list = []
+
+    for teg in tegs:
+        href_list.append('https://wasserkraft.ru/' + str(teg.get('href')))
+
+    href_list.pop(0)
+
+    index = 0
+    for tag in href_list:
+        if tag.find(' black.jpg') != -1:
+            index = href_list.index(tag)
+            href_list.remove(href_list[index])
+
+
+    href_str = '; '.join(href_list)
+
+    return href_str
+
+
+def parse(articuls, start_line, count, website):
+    start_time = time.time()
+
+    count -= start_line
+    start_line1 = start_line
+
     URL = ''
 
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-
-        i=0
-        for articul in articuls:
-            task = asyncio.create_task(get_data_task(articul, URL, session))
-            tasks.append(task)
-            print(str(round(i * 100 / count)) + '%')
-            i += 1
-
-        print(info)
-        await asyncio.gather(*tasks)
-
-
-    print('100%')
-    return info
-
-
-
-async def get_data_task(articul, URL, session):
-    URL = 'https://wasserkraft.ru/search-results?query=' + str(articul)
-
-    async with session.get(url=URL, headers=HEADERS) as resp:
+    i=1
+    for articul in articuls:
+        URL = get_url(articul, URL, website)
 
         html = None
         while html == None:
-            #html = get_html(URL)
-            html = await resp.text()
-
-            print(html)
+            html = get_html(URL)
             try:
-                if resp.status == 200:
-                    await get_content(html, session)
+                if html.status_code == 200:
+                    get_content(html.text, website, articul)
+                    start_line1 += 1
 
+                    print(str(round(i*100/count)) + '%')
+                    i+=1
 
             except AttributeError:
-                print("Connection refused")
+                print("Connetction refused")
 
-        return html
+        if i == 2:
+            end_time = time.time()
+            print(((end_time - start_time)*count)/60)
+
+    return info
 
 
-
-async def website_parse(url, session):
+def website_parse(url, website, articul):
     html = None
     while html == None:
-        html = await (session.get(url)).text()
+        html = get_html(url)
         try:
             if html.status_code == 200:
                 #print(html.text)
 
-                get_website_content(html)
+                get_website_content(html.text, website, articul)
         except AttributeError:
             print("Connection refused in website_parse")

@@ -2,14 +2,14 @@ from parse2 import get_page_data
 from parse import parse
 from excel_work import *
 
-start_line = 24
-end_line = 603
+start_line = int(input('Начальная строка: '))
+end_line = int(input('Конечная строка: '))
 
-articuls = work_excel(start_line, end_line)
-info = parse(articuls, start_line, end_line)
-input_to_worksheet(info, start_line, end_line)
+print('\nВыберите сайт:\n'
+      '1) wasserkraft\n'
+      '2) davitamebel')
+website = int(input())
 
-i = 0
-for line in range(start_line, end_line):
-    print(info[i]['title'])
-    i+=1
+articuls = work_excel(start_line, end_line, website)
+info = parse(articuls, start_line, end_line, website)
+input_to_worksheet(info, start_line, end_line, website)
