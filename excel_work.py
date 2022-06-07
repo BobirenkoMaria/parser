@@ -1,11 +1,12 @@
 import openpyxl
+from string import punctuation, whitespace
 
 articuls = []
 
 
-
 def set_worksheet():
-    wb = openpyxl.open('TestCopy.xlsx')
+    wb = openpyxl.open('TestCopy.xlsx', data_only=True)
+
     sheet = wb.active
     return sheet, wb
 
@@ -20,7 +21,7 @@ def work_excel(start_line, count, website):
             })
         elif website == 2:
             articuls.append({
-                (sheet[line][0].value).pop[0]
+                sheet[line][0].value
             })
 
     return articuls
@@ -37,10 +38,11 @@ def input_to_worksheet(info, start_line, count, website):
             sheet[line][4].value = int(info[i]['price'].replace(' ', ''))
             sheet[line][10].value = info[i]['material']
         elif website == 2:
-            sheet[line][0].value = info[i]['articulate']
             sheet[line][1].value = info[i]['title']
             sheet[line][2].value = int(info[i]['price'].replace(' ', ''))
             sheet[line][8].value = info[i]['material']
+            sheet[line][10].value = info[i]['collection']
+            sheet[line][16].value = info[i]['description']
 
         i+=1
 

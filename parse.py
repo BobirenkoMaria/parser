@@ -20,21 +20,29 @@ def get_url(articul, url, website):
         url = 'https://wasserkraft.ru/search-results?query=' + str(articul)
 
     elif website == 2:
-        url = 'https://davitamebel.ru/search/?q=' + str(articul)
+        url = 'https://davitamebel.ru/search/?q=' + str(articul).replace("{", "").replace("}", "").replace("'","")
     return url
 
 
-def get_content(html, website, articul):
+def get_content(html, website):
     soup = BeautifulSoup(html, 'html.parser')
-    items = soup.find('a', itemprop='name', href=True)
-
+    items = ''
     href_now = ''
-    if items != None:
-        if website == 1:
+
+    if website == 1:
+        items = soup.find('a', itemprop='name', href=True)
+
+        if items != None:
             href_now = 'https://wasserkraft.ru/' + items.get('href')
-        elif website == 2:
-            href_now = 'https://davitamebel.ru/' + items.get('href')
-        website_parse(href_now, website, articul)
+
+
+    elif website == 2:
+        items = soup.find('a', target='_self', itemprop='name', href=True)
+        if items != None:
+            href_now = 'https://davitamebel.ru' + items.get('href')
+
+    if items != None:
+        website_parse(href_now, website)
 
     else:
         if website == 1:
@@ -47,36 +55,15 @@ def get_content(html, website, articul):
             })
         elif website == 2:
             info.append({
-                'articulate': '',
                 'title': '',
-                'main_photo': '',
-                'photos': '',
                 'price': '0',
-                'material': ''
+                'material': '',
+                'collection': '',
+                'description': ''
             })
 
 
-def get_content1(html, i):
-    soup = BeautifulSoup(html, 'html.parser')
-    items = soup.find('a', itemprop='name', href=True)
-
-    href_now = ''
-    if items != None:
-        href_now = 'https://wasserkraft.ru/' + items.get('href')
-        # website_parse(href_now)
-
-    else:
-        info.append({
-            'title': '',
-            'main_photo': '',
-            'photos': '',
-            'price': '',
-            'material': ''
-        })
-    #print(str(i) + ')', href_now)
-
-
-def get_website_content(html, website, articul):
+def get_website_content(html, website):
     soup = BeautifulSoup(html, 'html.parser')
 
     if website == 1:
@@ -90,7 +77,7 @@ def get_website_content(html, website, articul):
         info.append({
             'title': title.get_text(),
             'main_photo': 'https://wasserkraft.ru/' + str(main_photo.get('href')),
-            'photos': getList(photos),
+            'photos': getList(photos, website),
             'price': price.get_text(),
             'material': (str(material.get_text()).strip())[9:]
         })
@@ -100,36 +87,47 @@ def get_website_content(html, website, articul):
         if (price == None):
             price = soup.find('span', itemprop="price")
 
-        material = soup.find('div', class_='product-info')
+        materials = soup.find('div', class_='product-info')
+        materials = materials.find_all('li')
+        materials = getList(materials, website)
+
+        collection = title.find('strong')
+        description = soup.find('div', itemprop='description')
+
 
         info.append({
-            'articulate': articul,
             'title': title.get_text(),
-            'price': price.get_text(),
-            'material': ''
+            'price': (price.get_text()).replace('\xa0', '')[:-2],
+            'material': materials,
+            'collection': ((collection.get_text()).split(' '))[0],
+            'description': description.get_text()
         })
 
-    #print(info)
+    print(info)
 
 
-def getList(tegs):
-    href_list = []
+def getList(tegs, website):
+    str_list = []
 
-    for teg in tegs:
-        href_list.append('https://wasserkraft.ru/' + str(teg.get('href')))
+    if website == 1:
+        for teg in tegs:
+                str_list.append('https://wasserkraft.ru/' + str(teg.get('href')))
 
-    href_list.pop(0)
+        str_list.pop(0)
 
-    index = 0
-    for tag in href_list:
-        if tag.find(' black.jpg') != -1:
-            index = href_list.index(tag)
-            href_list.remove(href_list[index])
+        index = 0
+        for tag in str_list:
+            if tag.find(' black.jpg') != -1:
+                index = str_list.index(tag)
+                str_list.remove(str_list[index])
 
+    elif website == 2:
+        for teg in tegs:
+            str_list.append(teg.get_text())
 
-    href_str = '; '.join(href_list)
+    str_list = '; '.join(str_list)
 
-    return href_str
+    return str_list
 
 
 def parse(articuls, start_line, count, website):
@@ -149,7 +147,7 @@ def parse(articuls, start_line, count, website):
             html = get_html(URL)
             try:
                 if html.status_code == 200:
-                    get_content(html.text, website, articul)
+                    get_content(html.text, website)
                     start_line1 += 1
 
                     print(str(round(i*100/count)) + '%')
@@ -165,14 +163,12 @@ def parse(articuls, start_line, count, website):
     return info
 
 
-def website_parse(url, website, articul):
+def website_parse(url, website):
     html = None
     while html == None:
         html = get_html(url)
         try:
             if html.status_code == 200:
-                #print(html.text)
-
-                get_website_content(html.text, website, articul)
+                get_website_content(html.text, website)
         except AttributeError:
             print("Connection refused in website_parse")

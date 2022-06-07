@@ -1,9 +1,8 @@
-from parse2 import get_page_data
 from parse import parse
 from excel_work import *
 
 start_line = int(input('Начальная строка: '))
-end_line = int(input('Конечная строка: '))
+end_line = int(input('Конечная строка: '))+1
 
 print('\nВыберите сайт:\n'
       '1) wasserkraft\n'
